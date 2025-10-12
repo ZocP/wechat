@@ -1,0 +1,349 @@
+{
+  "info": {
+    "name": "接机管理系统 API",
+    "description": "微信小程序接机管理系统的API测试集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "认证",
+      "item": [
+        {
+          "name": "微信登录",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"mock_wechat_code\",\n  \"phone_code\": \"mock_phone_code\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/wechat/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "wechat", "login"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.code === 0) {",
+                  "        pm.collectionVariables.set('jwt_token', response.data.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "获取当前用户信息",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "报名管理",
+      "item": [
+        {
+          "name": "创建报名",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"张三\",\n  \"phone\": \"13800138000\",\n  \"wechat_id\": \"wx1234567890\",\n  \"flight_no\": \"CA1234\",\n  \"arrival_date\": \"2024-01-01\",\n  \"arrival_time\": \"14:30\",\n  \"departure_city\": \"北京\",\n  \"companions\": 2,\n  \"luggage_count\": 1,\n  \"pickup_method\": \"group\",\n  \"notes\": \"测试备注\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/registrations",
+              "host": ["{{base_url}}"],
+              "path": ["registrations"]
+            }
+          }
+        },
+        {
+          "name": "获取我的报名列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/registrations/my",
+              "host": ["{{base_url}}"],
+              "path": ["registrations", "my"]
+            }
+          }
+        },
+        {
+          "name": "获取报名详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/registrations/1",
+              "host": ["{{base_url}}"],
+              "path": ["registrations", "1"]
+            }
+          }
+        },
+        {
+          "name": "更新报名",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"张三（更新）\",\n  \"notes\": \"更新后的备注\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/registrations/1",
+              "host": ["{{base_url}}"],
+              "path": ["registrations", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "订单管理",
+      "item": [
+        {
+          "name": "创建订单",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"registration_id\": 1,\n  \"price_total\": 5000,\n  \"currency\": \"CNY\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "获取我的订单列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/my",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "my"]
+            }
+          }
+        },
+        {
+          "name": "获取订单详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/1",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "支付管理",
+      "item": [
+        {
+          "name": "准备支付",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/pay/prepare",
+              "host": ["{{base_url}}"],
+              "path": ["pay", "prepare"]
+            }
+          }
+        },
+        {
+          "name": "支付回调（模拟）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_id\": \"4200001234567890\",\n  \"order_id\": 1,\n  \"amount\": 5000,\n  \"status\": \"SUCCESS\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/pay/notify",
+              "host": ["{{base_url}}"],
+              "path": ["pay", "notify"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "消息板",
+      "item": [
+        {
+          "name": "获取可见消息",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/notices",
+              "host": ["{{base_url}}"],
+              "path": ["notices"]
+            }
+          }
+        },
+        {
+          "name": "根据航班号获取消息",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/notices/flight/CA1234",
+              "host": ["{{base_url}}"],
+              "path": ["notices", "flight", "CA1234"]
+            }
+          }
+        },
+        {
+          "name": "获取消息详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/notices/1",
+              "host": ["{{base_url}}"],
+              "path": ["notices", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "管理端",
+      "item": [
+        {
+          "name": "创建消息（管理端）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"flight_no\": \"CA1234\",\n  \"terminal\": \"T3\",\n  \"pickup_batch\": \"批次1\",\n  \"arrival_airport\": \"北京首都国际机场\",\n  \"meeting_point\": \"T3航站楼出口\",\n  \"guide_text\": \"请按照指示牌前往集合点\",\n  \"map_url\": \"https://example.com/map.jpg\",\n  \"contact_name\": \"张司机\",\n  \"contact_phone\": \"13800138000\",\n  \"visible_from\": \"2024-01-01T00:00:00Z\",\n  \"visible_to\": \"2024-01-02T23:59:59Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/notices",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "notices"]
+            }
+          }
+        },
+        {
+          "name": "通知订单（管理端）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/orders/1/notify",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "orders", "1", "notify"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "健康检查",
+      "item": [
+        {
+          "name": "健康检查",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

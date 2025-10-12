@@ -1,0 +1,683 @@
+openapi: 3.0.3
+info:
+  title: 接机管理系统 API
+  description: 微信小程序接机管理系统的后端API文档
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@pickup.com
+servers:
+  - url: http://localhost:8080/api/v1
+    description: 本地开发环境
+  - url: https://api.pickup.com/v1
+    description: 生产环境
+
+paths:
+  # 认证相关
+  /auth/wechat/login:
+    post:
+      tags:
+        - 认证
+      summary: 微信登录
+      description: 通过微信小程序code和手机号code进行登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - phone_code
+              properties:
+                code:
+                  type: string
+                  description: 微信登录code
+                  example: "081234567890"
+                phone_code:
+                  type: string
+                  description: 手机号授权code
+                  example: "081234567890"
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 0
+                message: "success"
+                data:
+                  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  user:
+                    id: 1
+                    openid: "o1234567890"
+                    phone: "13800138000"
+                    nickname: "微信用户"
+                    role: "passenger"
+                    status: "active"
+                time: "2024-01-01T12:00:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /auth/me:
+    get:
+      tags:
+        - 认证
+      summary: 获取当前用户信息
+      description: 获取当前登录用户的详细信息
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # 报名相关
+  /registrations:
+    post:
+      tags:
+        - 报名管理
+      summary: 创建报名
+      description: 创建新的接机报名
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRegistrationRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      tags:
+        - 报名管理
+      summary: 获取我的报名列表
+      description: 获取当前用户的所有报名记录
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /registrations/{id}:
+    get:
+      tags:
+        - 报名管理
+      summary: 获取报名详情
+      description: 根据ID获取报名详细信息
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 报名ID
+      responses:
+        '200':
+          description: 获取成功
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - 报名管理
+      summary: 更新报名
+      description: 更新报名信息（仅草稿状态可修改）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 报名ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRegistrationRequest'
+      responses:
+        '200':
+          description: 更新成功
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    delete:
+      tags:
+        - 报名管理
+      summary: 删除报名
+      description: 删除报名（仅草稿状态可删除）
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 报名ID
+      responses:
+        '200':
+          description: 删除成功
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # 订单相关
+  /orders:
+    post:
+      tags:
+        - 订单管理
+      summary: 创建订单
+      description: 根据报名创建接机订单
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+    get:
+      tags:
+        - 订单管理
+      summary: 获取我的订单列表
+      description: 获取当前用户的所有订单
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: 获取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /orders/{id}:
+    get:
+      tags:
+        - 订单管理
+      summary: 获取订单详情
+      description: 根据ID获取订单详细信息
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 订单ID
+      responses:
+        '200':
+          description: 获取成功
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # 支付相关
+  /pay/prepare:
+    post:
+      tags:
+        - 支付管理
+      summary: 准备支付
+      description: 为订单准备微信支付
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order_id
+              properties:
+                order_id:
+                  type: integer
+                  description: 订单ID
+                  example: 1
+      responses:
+        '200':
+          description: 准备成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                code: 0
+                message: "success"
+                data:
+                  prepay_id: "prepay_1234567890"
+                  pay_params:
+                    appId: "wx1234567890"
+                    timeStamp: "1640995200"
+                    nonceStr: "random_string"
+                    package: "prepay_id=prepay_1234567890"
+                    signType: "MD5"
+                    paySign: "mock_sign"
+                time: "2024-01-01T12:00:00Z"
+
+  /pay/notify:
+    post:
+      tags:
+        - 支付管理
+      summary: 支付回调
+      description: 微信支付结果通知回调接口
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentNotifyRequest'
+      responses:
+        '200':
+          description: 处理成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: "SUCCESS"
+                  message:
+                    type: string
+                    example: "OK"
+
+  # 管理端接口
+  /admin/orders/{id}/notify:
+    post:
+      tags:
+        - 管理端
+      summary: 通知订单
+      description: 将订单标记为已通知状态
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 订单ID
+      responses:
+        '200':
+          description: 通知成功
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ApiResponse:
+      type: object
+      required:
+        - code
+        - message
+        - time
+      properties:
+        code:
+          type: integer
+          description: 状态码，0表示成功
+          example: 0
+        message:
+          type: string
+          description: 响应消息
+          example: "success"
+        data:
+          type: object
+          description: 响应数据
+        time:
+          type: string
+          format: date-time
+          description: 响应时间（ISO8601格式）
+          example: "2024-01-01T12:00:00Z"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        openid:
+          type: string
+          example: "o1234567890"
+        unionid:
+          type: string
+          example: "u1234567890"
+        phone:
+          type: string
+          example: "13800138000"
+        nickname:
+          type: string
+          example: "微信用户"
+        avatar_url:
+          type: string
+          example: "https://example.com/avatar.jpg"
+        role:
+          type: string
+          enum: [passenger, driver, dispatcher, admin]
+          example: "passenger"
+        status:
+          type: string
+          enum: [active, inactive, blocked]
+          example: "active"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        last_login_at:
+          type: string
+          format: date-time
+
+    Registration:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        name:
+          type: string
+          example: "张三"
+        phone:
+          type: string
+          example: "13800138000"
+        wechat_id:
+          type: string
+          example: "wx1234567890"
+        flight_no:
+          type: string
+          example: "CA1234"
+        arrival_date:
+          type: string
+          format: date
+          example: "2024-01-01"
+        arrival_time:
+          type: string
+          format: time
+          example: "14:30:00"
+        departure_city:
+          type: string
+          example: "北京"
+        companions:
+          type: integer
+          example: 2
+        luggage_count:
+          type: integer
+          example: 1
+        pickup_method:
+          type: string
+          enum: [group, private, shuttle]
+          example: "group"
+        notes:
+          type: string
+          example: "备注信息"
+        status:
+          type: string
+          enum: [draft, submitted, confirmed]
+          example: "draft"
+
+    CreateRegistrationRequest:
+      type: object
+      required:
+        - name
+        - phone
+        - flight_no
+        - arrival_date
+        - arrival_time
+        - departure_city
+        - pickup_method
+      properties:
+        name:
+          type: string
+          example: "张三"
+        phone:
+          type: string
+          example: "13800138000"
+        wechat_id:
+          type: string
+          example: "wx1234567890"
+        flight_no:
+          type: string
+          example: "CA1234"
+        arrival_date:
+          type: string
+          format: date
+          example: "2024-01-01"
+        arrival_time:
+          type: string
+          format: time
+          example: "14:30"
+        departure_city:
+          type: string
+          example: "北京"
+        companions:
+          type: integer
+          example: 2
+        luggage_count:
+          type: integer
+          example: 1
+        pickup_method:
+          type: string
+          enum: [group, private, shuttle]
+          example: "group"
+        notes:
+          type: string
+          example: "备注信息"
+
+    UpdateRegistrationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        wechat_id:
+          type: string
+        flight_no:
+          type: string
+        arrival_date:
+          type: string
+          format: date
+        arrival_time:
+          type: string
+          format: time
+        departure_city:
+          type: string
+        companions:
+          type: integer
+        luggage_count:
+          type: integer
+        pickup_method:
+          type: string
+          enum: [group, private, shuttle]
+        notes:
+          type: string
+
+    PickupOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+        passenger_id:
+          type: integer
+        registration_id:
+          type: integer
+        status:
+          type: string
+          enum: [created, paid, assigned, notified, completed, canceled]
+        price_total:
+          type: integer
+          description: 总价格（分）
+        currency:
+          type: string
+          example: "CNY"
+        meeting_point:
+          type: string
+        terminal:
+          type: string
+        gate:
+          type: string
+        scheduled_arrival_time:
+          type: string
+          format: date-time
+        estimated_arrival_time:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - registration_id
+        - price_total
+      properties:
+        registration_id:
+          type: integer
+          example: 1
+        price_total:
+          type: integer
+          description: 总价格（分）
+          example: 5000
+        currency:
+          type: string
+          example: "CNY"
+
+    PaymentNotifyRequest:
+      type: object
+      required:
+        - transaction_id
+        - order_id
+        - amount
+        - status
+      properties:
+        transaction_id:
+          type: string
+          example: "4200001234567890"
+        order_id:
+          type: integer
+          example: 1
+        amount:
+          type: integer
+          description: 支付金额（分）
+          example: 5000
+        status:
+          type: string
+          example: "SUCCESS"
+
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            code: 10001
+            message: "invalid parameters"
+            time: "2024-01-01T12:00:00Z"
+
+    Unauthorized:
+      description: 未授权
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            code: 10002
+            message: "unauthorized"
+            time: "2024-01-01T12:00:00Z"
+
+    Forbidden:
+      description: 禁止访问
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            code: 10003
+            message: "forbidden"
+            time: "2024-01-01T12:00:00Z"
+
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            code: 10004
+            message: "not found"
+            time: "2024-01-01T12:00:00Z"
+
+    InternalError:
+      description: 内部服务器错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            code: 10006
+            message: "internal server error"
+            time: "2024-01-01T12:00:00Z"
+
+tags:
+  - name: 认证
+    description: 用户认证相关接口
+  - name: 报名管理
+    description: 接机报名管理接口
+  - name: 订单管理
+    description: 订单管理接口
+  - name: 支付管理
+    description: 支付相关接口
+  - name: 管理端
+    description: 管理员专用接口
+
