@@ -3,16 +3,19 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
+	"pickup/internal/handler"
 	"pickup/internal/model"
+	"pickup/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 )
 
 // MockRegistrationService 模拟报名服务
@@ -20,24 +23,39 @@ type MockRegistrationService struct {
 	mock.Mock
 }
 
-func (m *MockRegistrationService) CreateRegistration(userID uint, req *model.CreateRegistrationRequest) (*model.Registration, error) {
+func (m *MockRegistrationService) CreateRegistration(userID uint, req *service.CreateRegistrationRequest) (*model.Registration, error) {
 	args := m.Called(userID, req)
-	return args.Get(0).(*model.Registration), args.Error(1)
+	var registration *model.Registration
+	if v := args.Get(0); v != nil {
+		registration = v.(*model.Registration)
+	}
+	return registration, args.Error(1)
 }
 
 func (m *MockRegistrationService) GetRegistration(id uint, userID uint) (*model.Registration, error) {
 	args := m.Called(id, userID)
-	return args.Get(0).(*model.Registration), args.Error(1)
+	var registration *model.Registration
+	if v := args.Get(0); v != nil {
+		registration = v.(*model.Registration)
+	}
+	return registration, args.Error(1)
 }
 
-func (m *MockRegistrationService) UpdateRegistration(id uint, userID uint, req *model.UpdateRegistrationRequest) (*model.Registration, error) {
+func (m *MockRegistrationService) UpdateRegistration(id uint, userID uint, req *service.UpdateRegistrationRequest) (*model.Registration, error) {
 	args := m.Called(id, userID, req)
-	return args.Get(0).(*model.Registration), args.Error(1)
+	var registration *model.Registration
+	if v := args.Get(0); v != nil {
+		registration = v.(*model.Registration)
+	}
+	return registration, args.Error(1)
 }
 
 func (m *MockRegistrationService) GetUserRegistrations(userID uint) ([]*model.Registration, error) {
 	args := m.Called(userID)
-	return args.Get(0).([]*model.Registration), args.Error(1)
+	if v := args.Get(0); v != nil {
+		return v.([]*model.Registration), args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 func (m *MockRegistrationService) DeleteRegistration(id uint, userID uint) error {
@@ -45,156 +63,319 @@ func (m *MockRegistrationService) DeleteRegistration(id uint, userID uint) error
 	return args.Error(0)
 }
 
-// TestCreateRegistration 测试创建报名
-func TestCreateRegistration(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func setupRegistrationRouter(service service.RegistrationService, withUser bool) *gin.Engine {
+	router := gin.New()
+	api := router.Group("/api/v1")
+	if withUser {
+		api.Use(func(c *gin.Context) {
+			c.Set("user_id", uint(1))
+		})
+	}
+	handler.NewRegistrationHandler(service, zap.NewNop()).RegisterRoutes(api)
+	return router
+}
 
-	// 创建模拟服务
+func TestCreateRegistration_Success(t *testing.T) {
 	mockService := new(MockRegistrationService)
+	expected := &model.Registration{ID: 1, UserID: 1, Name: "张三"}
+	mockService.On("CreateRegistration", uint(1), mock.MatchedBy(func(req *service.CreateRegistrationRequest) bool {
+		return req.Name == "张三" && req.Phone == "13800138000"
+	})).Return(expected, nil).Once()
 
-	// 设置期望的调用
-	expectedRegistration := &model.Registration{
-		ID:            1,
-		UserID:        1,
-		Name:          "张三",
-		Phone:         "13800138000",
-		FlightNo:      "CA1234",
-		ArrivalDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		ArrivalTime:   "14:30:00",
-		DepartureCity: "北京",
-		Companions:    2,
-		LuggageCount:  1,
-		PickupMethod:  model.PickupMethodGroup,
-		Status:        model.RegistrationStatusDraft,
+	router := setupRegistrationRouter(mockService, true)
+
+	body := map[string]interface{}{
+		"name":           "张三",
+		"phone":          "13800138000",
+		"flight_no":      "CA1234",
+		"arrival_date":   "2024-01-01",
+		"arrival_time":   "14:30",
+		"departure_city": "北京",
+		"companions":     1,
+		"luggage_count":  1,
+		"pickup_method":  "group",
 	}
-
-	request := &model.CreateRegistrationRequest{
-		Name:          "张三",
-		Phone:         "13800138000",
-		FlightNo:      "CA1234",
-		ArrivalDate:   "2024-01-01",
-		ArrivalTime:   "14:30",
-		DepartureCity: "北京",
-		Companions:    2,
-		LuggageCount:  1,
-		PickupMethod:  model.PickupMethodGroup,
-	}
-
-	mockService.On("CreateRegistration", uint(1), request).Return(expectedRegistration, nil)
-
-	// 创建测试请求
-	jsonBody, _ := json.Marshal(request)
-	req, _ := http.NewRequest("POST", "/api/v1/registrations", bytes.NewBuffer(jsonBody))
+	data, _ := json.Marshal(body)
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/registrations", bytes.NewReader(data))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer mock_token")
-
-	// 创建响应记录器
 	w := httptest.NewRecorder()
 
-	// 创建路由
-	router := gin.New()
-	// 这里需要实际的处理器，暂时跳过
-
-	// 执行请求
 	router.ServeHTTP(w, req)
 
-	// 验证结果
 	assert.Equal(t, http.StatusCreated, w.Code)
-
-	// 验证服务调用
+	var resp apiResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, model.CodeSuccess, resp.Code)
 	mockService.AssertExpectations(t)
 }
 
-// TestGetRegistration 测试获取报名
-func TestGetRegistration(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	// 创建模拟服务
+func TestCreateRegistration_Unauthorized(t *testing.T) {
 	mockService := new(MockRegistrationService)
+	router := setupRegistrationRouter(mockService, false)
 
-	// 设置期望的调用
-	expectedRegistration := &model.Registration{
-		ID:            1,
-		UserID:        1,
-		Name:          "张三",
-		Phone:         "13800138000",
-		FlightNo:      "CA1234",
-		ArrivalDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-		ArrivalTime:   "14:30:00",
-		DepartureCity: "北京",
-		Companions:    2,
-		LuggageCount:  1,
-		PickupMethod:  model.PickupMethodGroup,
-		Status:        model.RegistrationStatusDraft,
-	}
-
-	mockService.On("GetRegistration", uint(1), uint(1)).Return(expectedRegistration, nil)
-
-	// 创建测试请求
-	req, _ := http.NewRequest("GET", "/api/v1/registrations/1", nil)
-	req.Header.Set("Authorization", "Bearer mock_token")
-
-	// 创建响应记录器
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/registrations", bytes.NewReader([]byte(`{}`)))
+	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	// 创建路由
-	router := gin.New()
-	// 这里需要实际的处理器，暂时跳过
-
-	// 执行请求
 	router.ServeHTTP(w, req)
 
-	// 验证结果
-	assert.Equal(t, http.StatusOK, w.Code)
-
-	// 验证服务调用
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	mockService.AssertExpectations(t)
 }
 
-// TestGetUserRegistrations 测试获取用户报名列表
-func TestGetUserRegistrations(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	// 创建模拟服务
+func TestCreateRegistration_InvalidBody(t *testing.T) {
 	mockService := new(MockRegistrationService)
+	router := setupRegistrationRouter(mockService, true)
 
-	// 设置期望的调用
-	expectedRegistrations := []*model.Registration{
-		{
-			ID:            1,
-			UserID:        1,
-			Name:          "张三",
-			Phone:         "13800138000",
-			FlightNo:      "CA1234",
-			ArrivalDate:   time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-			ArrivalTime:   "14:30:00",
-			DepartureCity: "北京",
-			Companions:    2,
-			LuggageCount:  1,
-			PickupMethod:  model.PickupMethodGroup,
-			Status:        model.RegistrationStatusDraft,
-		},
-	}
-
-	mockService.On("GetUserRegistrations", uint(1)).Return(expectedRegistrations, nil)
-
-	// 创建测试请求
-	req, _ := http.NewRequest("GET", "/api/v1/registrations/my", nil)
-	req.Header.Set("Authorization", "Bearer mock_token")
-
-	// 创建响应记录器
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/registrations", bytes.NewReader([]byte(`{"name":123}`)))
+	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	// 创建路由
-	router := gin.New()
-	// 这里需要实际的处理器，暂时跳过
-
-	// 执行请求
 	router.ServeHTTP(w, req)
 
-	// 验证结果
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	mockService.AssertExpectations(t)
+}
 
-	// 验证服务调用
+func TestCreateRegistration_ServiceError(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	mockService.On("CreateRegistration", uint(1), mock.Anything).Return((*model.Registration)(nil), errors.New("failed")).Once()
+	router := setupRegistrationRouter(mockService, true)
+
+	body := map[string]interface{}{
+		"name":           "张三",
+		"phone":          "13800138000",
+		"flight_no":      "CA1234",
+		"arrival_date":   "2024-01-01",
+		"arrival_time":   "14:30",
+		"departure_city": "北京",
+		"pickup_method":  "group",
+	}
+	data, _ := json.Marshal(body)
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/registrations", bytes.NewReader(data))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestGetRegistration_Success(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	expected := &model.Registration{ID: 1, UserID: 1, Name: "张三"}
+	mockService.On("GetRegistration", uint(1), uint(1)).Return(expected, nil).Once()
+	router := setupRegistrationRouter(mockService, true)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/registrations/1", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestGetRegistration_InvalidID(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	router := setupRegistrationRouter(mockService, true)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/registrations/abc", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestGetRegistration_ServiceError(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	mockService.On("GetRegistration", uint(1), uint(1)).Return((*model.Registration)(nil), errors.New("not found")).Once()
+	router := setupRegistrationRouter(mockService, true)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/registrations/1", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestGetRegistration_Unauthorized(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	router := setupRegistrationRouter(mockService, false)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/registrations/1", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestGetMyRegistrations_Success(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	expected := []*model.Registration{{ID: 1, UserID: 1}}
+	mockService.On("GetUserRegistrations", uint(1)).Return(expected, nil).Once()
+	router := setupRegistrationRouter(mockService, true)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/registrations", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestGetMyRegistrations_ServiceError(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	mockService.On("GetUserRegistrations", uint(1)).Return(([]*model.Registration)(nil), errors.New("failed")).Once()
+	router := setupRegistrationRouter(mockService, true)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/registrations", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestUpdateRegistration_Success(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	expected := &model.Registration{ID: 1, UserID: 1, Name: "李四"}
+	mockService.On("UpdateRegistration", uint(1), uint(1), mock.MatchedBy(func(req *service.UpdateRegistrationRequest) bool {
+		return req.Name != nil && *req.Name == "李四"
+	})).Return(expected, nil).Once()
+	router := setupRegistrationRouter(mockService, true)
+
+	body := map[string]string{"name": "李四"}
+	data, _ := json.Marshal(body)
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/registrations/1", bytes.NewReader(data))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestUpdateRegistration_InvalidID(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	router := setupRegistrationRouter(mockService, true)
+
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/registrations/abc", bytes.NewReader([]byte(`{"name":"李四"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestUpdateRegistration_InvalidBody(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	router := setupRegistrationRouter(mockService, true)
+
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/registrations/1", bytes.NewReader([]byte(`{"name":123}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestUpdateRegistration_ServiceError(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	mockService.On("UpdateRegistration", uint(1), uint(1), mock.Anything).Return((*model.Registration)(nil), errors.New("failed")).Once()
+	router := setupRegistrationRouter(mockService, true)
+
+	body := map[string]string{"name": "李四"}
+	data, _ := json.Marshal(body)
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/registrations/1", bytes.NewReader(data))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestUpdateRegistration_Unauthorized(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	router := setupRegistrationRouter(mockService, false)
+
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/registrations/1", bytes.NewReader([]byte(`{"name":"李四"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestDeleteRegistration_Success(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	mockService.On("DeleteRegistration", uint(1), uint(1)).Return(nil).Once()
+	router := setupRegistrationRouter(mockService, true)
+
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/registrations/1", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestDeleteRegistration_InvalidID(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	router := setupRegistrationRouter(mockService, true)
+
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/registrations/abc", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestDeleteRegistration_ServiceError(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	mockService.On("DeleteRegistration", uint(1), uint(1)).Return(errors.New("failed")).Once()
+	router := setupRegistrationRouter(mockService, true)
+
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/registrations/1", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestDeleteRegistration_Unauthorized(t *testing.T) {
+	mockService := new(MockRegistrationService)
+	router := setupRegistrationRouter(mockService, false)
+
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/registrations/1", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	mockService.AssertExpectations(t)
 }
