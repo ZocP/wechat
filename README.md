@@ -255,12 +255,11 @@ A: 需要先在微信商户平台配置支付参数，然后在环境变量中�
 ## 联系方式
 
 - 项目维护者：Pickup Team
-- 邮箱：support@pickup.com
-- 项目地址：https://github.com/your-org/pickup
+- 项目地址：https://github.com/ZocP/wechat
 
 ## 更新日志
 
-### v1.0.0 (2024-01-01)
+### v1.0.0 (2025-10-11)
 
 - ✨ 初始版本发布
 - 🔐 实现微信登录功能
