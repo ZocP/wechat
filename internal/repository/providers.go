@@ -38,6 +38,11 @@ func Provide() fx.Option {
 				NewNoticeRepository,
 				fx.ResultTags(`name:"noticeRepo"`),
 			),
+			// 数据库结构仓储
+			fx.Annotate(
+				NewSchemaRepository,
+				fx.ResultTags(`name:"schemaRepo"`),
+			),
 		),
 	)
 }
