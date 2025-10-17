@@ -1,14 +1,15 @@
-package utils
+package tests
 
 import (
 	"encoding/base64"
+	"pickup/internal/utils"
 	"strings"
 	"testing"
 )
 
 func TestNewCryptoUtilKeyLength(t *testing.T) {
 	t.Run("pad short key to 32 bytes", func(t *testing.T) {
-		util := NewCryptoUtil("short")
+		util := utils.NewCryptoUtil("short")
 		if got := len(util.key); got != 32 {
 			t.Fatalf("expected key length 32, got %d", got)
 		}
@@ -22,7 +23,7 @@ func TestNewCryptoUtilKeyLength(t *testing.T) {
 
 	t.Run("truncate long key to 32 bytes", func(t *testing.T) {
 		longKey := strings.Repeat("a", 40)
-		util := NewCryptoUtil(longKey)
+		util := utils.NewCryptoUtil(longKey)
 		if got := len(util.key); got != 32 {
 			t.Fatalf("expected key length 32, got %d", got)
 		}
@@ -34,7 +35,7 @@ func TestNewCryptoUtilKeyLength(t *testing.T) {
 }
 
 func TestCryptoUtilEncryptDecrypt(t *testing.T) {
-	util := NewCryptoUtil("this-is-a-test-key")
+	util := utils.NewCryptoUtil("this-is-a-test-key")
 
 	plaintext := "hello world"
 	ciphertext, err := util.Encrypt(plaintext)
@@ -58,7 +59,7 @@ func TestCryptoUtilEncryptDecrypt(t *testing.T) {
 }
 
 func TestCryptoUtilDecryptErrors(t *testing.T) {
-	util := NewCryptoUtil("example-key")
+	util := utils.NewCryptoUtil("example-key")
 
 	t.Run("invalid base64", func(t *testing.T) {
 		if _, err := util.Decrypt("not-base64"); err == nil {
