@@ -33,6 +33,11 @@ func Provide() fx.Option {
 				NewNoticeService,
 				fx.ParamTags(`name:"noticeRepo"`),
 			),
+			// 数据库结构导出服务
+			fx.Annotate(
+				NewSchemaService,
+				fx.ParamTags(`name:"schemaRepo"`),
+			),
 		),
 	)
 }

@@ -17,6 +17,7 @@ type RouterConfig struct {
 	OrderService        service.OrderService
 	PaymentService      service.PaymentService
 	NoticeService       service.NoticeService
+	SchemaService       service.SchemaService
 	JWTConfig           *config.JWTConfig
 	Logger              *zap.Logger
 }
@@ -28,6 +29,7 @@ func NewRouterConfig(
 	orderService service.OrderService,
 	paymentService service.PaymentService,
 	noticeService service.NoticeService,
+	schemaService service.SchemaService,
 	jwtConfig *config.JWTConfig,
 	logger *zap.Logger,
 ) *RouterConfig {
@@ -37,6 +39,7 @@ func NewRouterConfig(
 		OrderService:        orderService,
 		PaymentService:      paymentService,
 		NoticeService:       noticeService,
+		SchemaService:       schemaService,
 		JWTConfig:           jwtConfig,
 		Logger:              logger,
 	}
@@ -53,6 +56,7 @@ func (rc *RouterConfig) SetupRoutes(r *gin.Engine) {
 	orderHandler := NewOrderHandler(rc.OrderService, rc.Logger)
 	paymentHandler := NewPaymentHandler(rc.PaymentService, rc.Logger)
 	noticeHandler := NewNoticeHandler(rc.NoticeService, rc.Logger)
+	adminHandler := NewAdminHandler(rc.SchemaService, rc.Logger)
 
 	// 创建JWT工具（这里需要实际的JWT工具实例）
 	// jwtUtil := utils.NewJWTUtil(rc.JWTConfig.Secret, rc.JWTConfig.ExpireTime, rc.JWTConfig.Issuer)
@@ -63,6 +67,7 @@ func (rc *RouterConfig) SetupRoutes(r *gin.Engine) {
 	orderHandler.RegisterRoutes(api)
 	paymentHandler.RegisterRoutes(api)
 	noticeHandler.RegisterRoutes(api)
+	adminHandler.RegisterRoutes(api)
 
 	// 健康检查
 	api.GET("/health", func(c *gin.Context) {
