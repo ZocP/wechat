@@ -1,273 +1,283 @@
-# 接机管理系统
+# Pickup Management System
 
-一个基于 Go + Gin + GORM 的微信小程序接机管理系统后端服务。
+A Go backend service for a WeChat Mini Program-based airport pickup management system, built with Gin, GORM, and Uber FX.
 
-## 功能特性
+## Features
 
-- 🔐 微信小程序一键登录
-- 📝 接机报名管理
-- 💰 微信支付集成
-- 📋 订单状态跟踪
-- 📢 消息板公告
-- 👥 司机分配管理
-- 🔒 JWT 认证授权
-- 📊 完整的 API 文档
+- **WeChat Mini Program Login** – One-click authentication via WeChat OAuth
+- **Registration Management** – Passengers submit pickup requests with flight details
+- **Order Management** – Create and track pickup orders with status workflow
+- **WeChat Pay Integration** – Prepare payments and handle async notifications
+- **Notice Board** – Publish and query announcements, filterable by flight number
+- **Driver Assignment** – Assign drivers to orders and track acceptance
+- **JWT Authentication** – Stateless auth with token refresh
+- **Rate Limiting** – Per-IP request throttling middleware
+- **OpenAPI Documentation** – Full API spec in `api/openapi.yaml`
 
-## 技术栈
+## Tech Stack
 
-- **语言**: Go 1.25+
-- **框架**: Gin (HTTP Router)
-- **数据库**: MySQL 8.0+
-- **ORM**: GORM
-- **依赖注入**: Uber FX
-- **日志**: Zap
-- **配置**: Viper
-- **认证**: JWT
+| Component            | Technology         |
+| -------------------- | ------------------ |
+| Language             | Go 1.25+           |
+| HTTP Framework       | Gin                |
+| Database             | MySQL 8.0+         |
+| ORM                  | GORM               |
+| Dependency Injection | Uber FX            |
+| Logging              | Zap + Lumberjack   |
+| Configuration        | Viper              |
+| Authentication       | JWT (golang-jwt/v5)|
 
-## 项目结构
+## Project Structure
 
 ```
 pickup/
-├── api/                    # API 文档
-│   └── openapi.yaml       # OpenAPI 3.0 规范
-├── files/                  # 配置文件
-│   ├── config.yaml        # 主配置文件
-│   └── logs/              # 日志文件
-├── internal/              # 内部包
-│   ├── config/           # 配置管理
-│   ├── handler/          # HTTP 处理器
-│   ├── middleware/       # 中间件
-│   ├── model/            # 数据模型
-│   ├── repository/       # 数据访问层
-│   ├── service/          # 业务逻辑层
-│   └── utils/            # 工具函数
-├── migrations/           # 数据库迁移
-├── pkg/                  # 公共包
-│   ├── config/          # 配置包
-│   ├── server/          # 服务器包
-│   └── zap/             # 日志包
-├── tests/                # 测试文件
-├── go.mod               # Go 模块文件
-├── go.sum               # Go 依赖校验
-└── README.md            # 项目说明
+├── api/                    # API documentation
+│   └── openapi.yaml        # OpenAPI 3.0 specification
+├── files/                  # Runtime files (generated)
+│   ├── config.yaml         # Main configuration
+│   └── logs/               # Log output
+├── internal/               # Private application code
+│   ├── config/             # Environment & DB configuration
+│   ├── handler/            # HTTP request handlers
+│   ├── middleware/          # Auth, rate-limit middleware
+│   ├── model/              # GORM data models
+│   ├── repository/         # Data access layer (DAL)
+│   ├── service/            # Business logic layer
+│   └── utils/              # JWT, crypto, WeChat utilities
+├── pkg/                    # Reusable public packages
+│   ├── config/             # Viper config loader
+│   ├── server/             # Gin server bootstrap
+│   └── zap/                # Zap logger setup
+├── tests/                  # Handler-level tests with mocks
+├── app.go                  # Application entry point
+├── docker-compose.yml      # MySQL container setup
+├── go.mod                  # Go module definition
+└── env.example             # Environment variable template
 ```
 
-## 快速开始
+## Quick Start
 
-### 环境要求
+### Prerequisites
 
 - Go 1.25+
-- MySQL 8.0+
-- 微信小程序 AppID 和 AppSecret
+- Docker (for MySQL) or a standalone MySQL 8.0+ instance
+- WeChat Mini Program AppID & AppSecret (for production)
 
-### 安装依赖
-
-```bash
-go mod tidy
-```
-
-### 配置环境变量
-
-复制环境变量示例文件：
+### 1. Start the Database
 
 ```bash
-cp env.example .env
+docker compose up -d
 ```
 
-编辑 `.env` 文件，填入实际配置：
+This launches a MySQL 8.0 container on port 3306 with database `pickup`.
 
-```env
-# 数据库配置
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=pickup
-
-# 微信小程序配置
-WECHAT_APPID=your_wechat_appid
-WECHAT_SECRET=your_wechat_secret
-WECHAT_MCH_ID=your_merchant_id
-WECHAT_MCH_KEY=your_merchant_key
-WECHAT_NOTIFY_URL=https://yourdomain.com/api/v1/pay/notify
-
-# JWT配置
-JWT_SECRET=your_jwt_secret_key_should_be_long_and_random
-JWT_EXPIRE_HOURS=24
-JWT_ISSUER=pickup
-
-# 加密配置
-CRYPTO_KEY=your_crypto_key_32_characters_long
-```
-
-### 数据库初始化
-
-1. 创建数据库：
-
-```sql
-CREATE DATABASE pickup CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-2. 运行数据库迁移：
+### 2. Set Environment Variables
 
 ```bash
-# 执行迁移脚本
-mysql -u root -p pickup < migrations/001_initial_schema.up.sql
+# Required
+export DB_HOST=localhost
+export DB_PORT=3306
+export DB_USER=root
+export DB_PASSWORD=pickup
+export DB_NAME=pickup
+export JWT_SECRET=your_jwt_secret_key_should_be_long_and_random
+export JWT_EXPIRE_HOURS=24
+export JWT_ISSUER=pickup
+export CRYPTO_KEY=your_crypto_key_32_characters_long
+
+# WeChat (use test values for local development)
+export WECHAT_APPID=your_wechat_appid
+export WECHAT_SECRET=your_wechat_secret
 ```
 
-### 启动服务
+See [env.example](env.example) for the full list including WeChat Pay settings.
+
+### 3. Run the Server
 
 ```bash
 go run app.go
 ```
 
-服务将在 `http://localhost:8080` 启动。
+The server starts at `http://localhost:8080` by default. To change the port, create `files/config.yaml`:
 
-## API 文档
-
-启动服务后，可以通过以下方式查看 API 文档：
-
-- OpenAPI 文档：`http://localhost:8080/api/openapi.yaml`
-- 健康检查：`http://localhost:8080/api/v1/health`
-
-### 主要 API 端点
-
-#### 认证相关
-
-- `POST /api/v1/auth/wechat/login` - 微信登录
-- `GET /api/v1/auth/me` - 获取当前用户信息
-
-#### 报名管理
-
-- `POST /api/v1/registrations` - 创建报名
-- `GET /api/v1/registrations/:id` - 获取报名详情
-- `PUT /api/v1/registrations/:id` - 更新报名
-- `DELETE /api/v1/registrations/:id` - 删除报名
-- `GET /api/v1/registrations/my` - 获取我的报名列表
-
-#### 订单管理
-
-- `POST /api/v1/orders` - 创建订单
-- `GET /api/v1/orders/:id` - 获取订单详情
-- `GET /api/v1/orders/my` - 获取我的订单列表
-
-#### 支付管理
-
-- `POST /api/v1/pay/prepare` - 准备支付
-- `POST /api/v1/pay/notify` - 支付回调
-
-#### 管理端
-
-- `POST /api/v1/admin/orders/:id/notify` - 通知订单
-
-## 测试
-
-### 运行单元测试
-
-```bash
-go test ./tests/...
+```yaml
+server:
+  port: 9090
+  allowCORS: true
+  releaseMode: false
 ```
 
-### 运行集成测试
+### 4. Verify
 
 ```bash
-go test ./tests/... -tags=integration
+curl http://localhost:8080/api/v1/health
+# {"code":0,"message":"ok","data":null}
 ```
 
-## 部署
+## API Endpoints
 
-### Docker 部署
+### Authentication
 
-1. 构建镜像：
+| Method | Path                        | Description              | Auth |
+| ------ | --------------------------- | ------------------------ | ---- |
+| POST   | `/api/v1/auth/wechat/login` | WeChat login             | No   |
+| GET    | `/api/v1/auth/me`           | Get current user profile | Yes  |
+
+### Registrations
+
+| Method | Path                        | Description              | Auth |
+| ------ | --------------------------- | ------------------------ | ---- |
+| POST   | `/api/v1/registrations`     | Create a registration    | Yes  |
+| GET    | `/api/v1/registrations`     | List my registrations    | Yes  |
+| GET    | `/api/v1/registrations/my`  | List my registrations    | Yes  |
+| GET    | `/api/v1/registrations/:id` | Get registration details | Yes  |
+| PUT    | `/api/v1/registrations/:id` | Update a registration    | Yes  |
+| DELETE | `/api/v1/registrations/:id` | Delete a registration    | Yes  |
+
+### Orders
+
+| Method | Path                              | Description                | Auth  |
+| ------ | --------------------------------- | -------------------------- | ----- |
+| POST   | `/api/v1/orders`                  | Create an order            | Yes   |
+| GET    | `/api/v1/orders`                  | List my orders             | Yes   |
+| GET    | `/api/v1/orders/:id`              | Get order details          | Yes   |
+| POST   | `/api/v1/admin/orders/:id/notify` | Send order notification    | Admin |
+
+### Payments
+
+| Method | Path                  | Description             | Auth |
+| ------ | --------------------- | ----------------------- | ---- |
+| POST   | `/api/v1/pay/prepare` | Initiate WeChat payment | Yes  |
+| POST   | `/api/v1/pay/notify`  | WeChat payment callback | No   |
+
+### Notices
+
+| Method | Path                                | Description           | Auth  |
+| ------ | ----------------------------------- | --------------------- | ----- |
+| GET    | `/api/v1/notices`                   | List visible notices  | Yes   |
+| GET    | `/api/v1/notices/:id`               | Get notice details    | Yes   |
+| GET    | `/api/v1/notices/flight/:flight_no` | Get notices by flight | Yes   |
+| POST   | `/api/v1/admin/notices`             | Create a notice       | Admin |
+| PUT    | `/api/v1/admin/notices/:id`         | Update a notice       | Admin |
+| DELETE | `/api/v1/admin/notices/:id`         | Delete a notice       | Admin |
+
+### Admin
+
+| Method | Path                                    | Description            | Auth  |
+| ------ | --------------------------------------- | ---------------------- | ----- |
+| GET    | `/api/v1/admin/exports/database-fields` | Export DB schema fields | Admin |
+
+## Testing
+
+### Run All Tests with Coverage Report
+
+```powershell
+powershell -File run_tests.ps1
+```
+
+This script runs the full test suite, displays color-coded per-function coverage, and prints the overall total.
+
+### Run All Tests (CLI)
 
 ```bash
-docker build -t pickup-api .
+go test ./... -v
 ```
 
-2. 运行容器：
+### Run with Coverage Profile
 
 ```bash
-docker run -d \
-  --name pickup-api \
-  -p 8080:8080 \
-  --env-file .env \
-  pickup-api
+go test ./... -coverprofile=coverage/coverage -count=1
+go tool cover -func coverage/coverage
 ```
 
-### 生产环境配置
+### Test Coverage Summary
 
-1. 设置 `server.releaseMode: true`
-2. 配置正确的数据库连接
-3. 设置微信支付相关配置
-4. 配置 HTTPS 证书
-5. 设置日志轮转和监控
+| Package              | Coverage |
+| -------------------- | -------- |
+| internal/config      | 39.3%    |
+| internal/handler     | 98.4%    |
+| internal/middleware   | 86.2%    |
+| internal/model       | 100.0%   |
+| internal/repository  | 92.1%    |
+| internal/service     | 85.3%    |
+| internal/utils       | 89.4%    |
+| pkg/config           | 83.3%    |
+| pkg/server           | 63.8%    |
+| pkg/zap              | 100.0%   |
+| **Overall**          | **89.2%**|
 
-## 开发指南
+Handler tests with mocks are in `tests/` (auth, order, payment, registration, notice). A Postman collection is available at [tests/postman_collection.json](tests/postman_collection.json).
 
-### 添加新的 API
+## Configuration
 
-1. 在 `internal/model/` 中定义数据模型
-2. 在 `internal/repository/` 中实现数据访问层
-3. 在 `internal/service/` 中实现业务逻辑
-4. 在 `internal/handler/` 中实现 HTTP 处理器
-5. 在 `internal/handler/router.go` 中注册路由
-6. 更新 `api/openapi.yaml` 文档
-7. 编写测试用例
+### Environment Variables
 
-### 代码规范
+| Variable            | Description                    | Default     |
+| ------------------- | ------------------------------ | ----------- |
+| `DB_HOST`           | MySQL host                     | `localhost` |
+| `DB_PORT`           | MySQL port                     | `3306`      |
+| `DB_USER`           | MySQL user                     | `root`      |
+| `DB_PASSWORD`       | MySQL password                 | (empty)     |
+| `DB_NAME`           | MySQL database name            | `pickup`    |
+| `JWT_SECRET`        | JWT signing key                | (empty)     |
+| `JWT_EXPIRE_HOURS`  | Token expiration in hours      | `24`        |
+| `JWT_ISSUER`        | JWT issuer claim               | `pickup`    |
+| `CRYPTO_KEY`        | AES encryption key (32 chars)  | (empty)     |
+| `WECHAT_APPID`      | WeChat Mini Program App ID     | (empty)     |
+| `WECHAT_SECRET`     | WeChat Mini Program App Secret | (empty)     |
+| `WECHAT_MCH_ID`     | WeChat Pay Merchant ID         | (empty)     |
+| `WECHAT_MCH_KEY`    | WeChat Pay Merchant Key        | (empty)     |
+| `WECHAT_NOTIFY_URL` | WeChat Pay callback URL        | (empty)     |
 
-- 使用 `gofmt` 格式化代码
-- 遵循 Go 官方代码规范
-- 编写完整的注释和文档
-- 保持函数简洁，单一职责
-- 使用有意义的变量和函数名
+### Server Configuration (`files/config.yaml`)
 
-## 常见问题
+```yaml
+server:
+  addr: ""          # Bind address (empty = all interfaces)
+  port: 8080        # Listen port
+  allowCORS: true   # Enable CORS headers
+  releaseMode: false # Gin release mode
+```
 
-### Q: 如何获取微信小程序的 code？
+## Deployment
 
-A: 在小程序端调用 `wx.login()` 获取 code，然后调用 `wx.getPhoneNumber()` 获取手机号授权 code。
+### Docker Compose (Development)
 
-### Q: 支付回调如何处理？
+```bash
+docker compose up -d    # Start MySQL
+go run app.go           # Start the API server
+```
 
-A: 微信支付成功后会自动调用 `/api/v1/pay/notify` 接口，系统会自动更新订单状态。
+### Production Checklist
 
-### Q: 如何添加新的用户角色？
+1. Set `server.releaseMode: true` in config
+2. Use strong, random values for `JWT_SECRET` and `CRYPTO_KEY`
+3. Configure real WeChat credentials and payment settings
+4. Set up HTTPS via reverse proxy (Nginx, Caddy, etc.)
+5. Configure log rotation (already handled by Lumberjack)
+6. Set appropriate database connection pool sizes
 
-A: 在 `internal/model/user.go` 中的 `UserRole` 类型中添加新角色，并更新数据库迁移脚本。
+## Development Guide
 
-### Q: 如何配置微信支付？
+### Adding a New API Endpoint
 
-A: 需要先在微信商户平台配置支付参数，然后在环境变量中设置相应的配置。
+1. Define the data model in `internal/model/`
+2. Implement the repository in `internal/repository/`
+3. Write business logic in `internal/service/`
+4. Create the HTTP handler in `internal/handler/`
+5. Register routes in `internal/handler/router.go`
+6. Update `api/openapi.yaml`
+7. Write unit tests
 
-## 贡献指南
+### Code Standards
 
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开 Pull Request
+- Format with `gofmt`
+- Follow standard Go project layout conventions
+- Keep functions small and single-purpose
+- Use meaningful names; document exported symbols
+- Write tests for all service-layer logic
 
-## 许可证
+## License
 
-本项目采用 MIT 许可证。详情请参阅 [LICENSE](LICENSE) 文件。
-
-## 联系方式
-
-- 项目维护者：Pickup Team
-- 项目地址：https://github.com/ZocP/wechat
-
-## 更新日志
-
-### v1.0.0 (2025-10-11)
-
-- ✨ 初始版本发布
-- 🔐 实现微信登录功能
-- 📝 实现报名管理功能
-- 💰 集成微信支付
-- 📋 实现订单管理
-- 📢 实现消息板功能
-- 🔒 实现 JWT 认证
-- 📊 完整的 API 文档
-- 🧪 单元测试和集成测试
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
