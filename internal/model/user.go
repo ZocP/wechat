@@ -28,8 +28,8 @@ const (
 // User 用户模型
 type User struct {
 	ID          uint       `json:"id" gorm:"primaryKey"`
-	OpenID      string     `json:"openid" gorm:"uniqueIndex;size:64;not null"`                                           // 微信OpenID
-	UnionID     string     `json:"unionid" gorm:"size:64"`                                                               // 微信UnionID
+	OpenID      string     `json:"-" gorm:"uniqueIndex;size:64;not null"`                                                // 微信OpenID (hidden from JSON)
+	UnionID     string     `json:"-" gorm:"size:64"`                                                                     // 微信UnionID (hidden from JSON)
 	Phone       string     `json:"phone" gorm:"uniqueIndex;size:20;not null"`                                            // 手机号
 	Nickname    string     `json:"nickname" gorm:"size:64"`                                                              // 昵称
 	AvatarURL   string     `json:"avatar_url" gorm:"size:255"`                                                           // 头像URL

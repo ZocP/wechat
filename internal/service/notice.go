@@ -69,6 +69,11 @@ func NewNoticeService(
 
 // CreateNotice 创建消息
 func (s *noticeService) CreateNotice(userID uint, req *CreateNoticeRequest) (*model.Notice, error) {
+	// 验证可见时间窗口
+	if !req.VisibleTo.After(req.VisibleFrom) {
+		return nil, fmt.Errorf("结束可见时间必须晚于开始可见时间")
+	}
+
 	notice := &model.Notice{
 		FlightNo:       req.FlightNo,
 		Terminal:       req.Terminal,

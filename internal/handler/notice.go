@@ -47,7 +47,11 @@ func (h *NoticeHandler) RegisterRoutes(r *gin.RouterGroup) {
 
 // CreateNotice 创建消息（管理端）
 func (h *NoticeHandler) CreateNotice(c *gin.Context) {
-	userID, _ := middleware.GetUserID(c)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "未授权"))
+		return
+	}
 
 	var req service.CreateNoticeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -117,7 +121,11 @@ func (h *NoticeHandler) GetNoticesByFlightNo(c *gin.Context) {
 
 // UpdateNotice 更新消息（管理端）
 func (h *NoticeHandler) UpdateNotice(c *gin.Context) {
-	userID, _ := middleware.GetUserID(c)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "未授权"))
+		return
+	}
 
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -145,7 +153,11 @@ func (h *NoticeHandler) UpdateNotice(c *gin.Context) {
 
 // DeleteNotice 删除消息（管理端）
 func (h *NoticeHandler) DeleteNotice(c *gin.Context) {
-	userID, _ := middleware.GetUserID(c)
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, model.NewErrorResponse(model.CodeUnauthorized, "未授权"))
+		return
+	}
 
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)

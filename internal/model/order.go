@@ -37,8 +37,8 @@ type PickupOrder struct {
 	// 关联
 	Passenger    *User         `json:"passenger,omitempty" gorm:"foreignKey:PassengerID"`
 	Registration *Registration `json:"registration,omitempty" gorm:"foreignKey:RegistrationID"`
-	Assignment   *Assignment   `json:"assignment,omitempty"`
-	PaymentOrder *PaymentOrder `json:"payment_order,omitempty"`
+	Assignment   *Assignment   `json:"assignment,omitempty" gorm:"foreignKey:OrderID"`
+	PaymentOrder *PaymentOrder `json:"payment_order,omitempty" gorm:"foreignKey:OrderID"`
 }
 
 // TableName 指定表名

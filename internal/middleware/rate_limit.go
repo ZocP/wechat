@@ -20,10 +20,41 @@ type RateLimiter struct {
 
 // NewRateLimiter 创建限流器
 func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
-	return &RateLimiter{
+	rl := &RateLimiter{
 		requests: make(map[string][]time.Time),
 		limit:    limit,
 		window:   window,
+	}
+
+	// 定期清理过期的空键，防止内存泄漏
+	go rl.cleanup()
+
+	return rl
+}
+
+// cleanup 定期清理过期的空键
+func (rl *RateLimiter) cleanup() {
+	ticker := time.NewTicker(rl.window * 2)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		rl.mutex.Lock()
+		now := time.Now()
+		cutoff := now.Add(-rl.window)
+		for key, requests := range rl.requests {
+			var valid []time.Time
+			for _, t := range requests {
+				if t.After(cutoff) {
+					valid = append(valid, t)
+				}
+			}
+			if len(valid) == 0 {
+				delete(rl.requests, key)
+			} else {
+				rl.requests[key] = valid
+			}
+		}
+		rl.mutex.Unlock()
 	}
 }
 

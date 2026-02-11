@@ -68,6 +68,19 @@ func NewRegistrationService(
 
 // CreateRegistration 创建报名
 func (s *registrationService) CreateRegistration(userID uint, req *CreateRegistrationRequest) (*model.Registration, error) {
+	// 验证非负数字段
+	if req.Companions < 0 {
+		return nil, fmt.Errorf("同行人数不能为负数")
+	}
+	if req.LuggageCount < 0 {
+		return nil, fmt.Errorf("行李数量不能为负数")
+	}
+
+	// 验证接送方式
+	if !isValidPickupMethod(req.PickupMethod) {
+		return nil, fmt.Errorf("无效的接送方式: %s", req.PickupMethod)
+	}
+
 	// 解析日期和时间
 	arrivalDate, err := time.Parse("2006-01-02", req.ArrivalDate)
 	if err != nil {
@@ -167,12 +180,21 @@ func (s *registrationService) UpdateRegistration(id uint, userID uint, req *Upda
 		registration.DepartureCity = *req.DepartureCity
 	}
 	if req.Companions != nil {
+		if *req.Companions < 0 {
+			return nil, fmt.Errorf("同行人数不能为负数")
+		}
 		registration.Companions = *req.Companions
 	}
 	if req.LuggageCount != nil {
+		if *req.LuggageCount < 0 {
+			return nil, fmt.Errorf("行李数量不能为负数")
+		}
 		registration.LuggageCount = *req.LuggageCount
 	}
 	if req.PickupMethod != nil {
+		if !isValidPickupMethod(*req.PickupMethod) {
+			return nil, fmt.Errorf("无效的接送方式: %s", *req.PickupMethod)
+		}
 		registration.PickupMethod = model.PickupMethod(*req.PickupMethod)
 	}
 	if req.Notes != nil {
@@ -221,4 +243,14 @@ func (s *registrationService) DeleteRegistration(id uint, userID uint) error {
 
 	s.logger.Info("registration deleted", zap.Uint("registration_id", id))
 	return nil
+}
+
+// isValidPickupMethod 验证接送方式是否有效
+func isValidPickupMethod(method string) bool {
+	switch model.PickupMethod(method) {
+	case model.PickupMethodGroup, model.PickupMethodPrivate, model.PickupMethodShuttle:
+		return true
+	default:
+		return false
+	}
 }

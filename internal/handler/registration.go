@@ -27,6 +27,12 @@ func NewRegistrationHandler(registrationService service.RegistrationService, log
 
 // RegisterRoutes 注册报名相关路由
 func (h *RegistrationHandler) RegisterRoutes(r *gin.RouterGroup) {
+	// Note: /my must be registered before /:id to avoid httprouter conflict
+	my := r.Group("/registrations/my")
+	{
+		my.GET("", h.GetMyRegistrations)
+	}
+
 	registrations := r.Group("/registrations")
 	{
 		registrations.POST("", h.CreateRegistration)
@@ -35,9 +41,6 @@ func (h *RegistrationHandler) RegisterRoutes(r *gin.RouterGroup) {
 		registrations.PUT("/:id", h.UpdateRegistration)
 		registrations.DELETE("/:id", h.DeleteRegistration)
 	}
-
-	// 兼容 /registrations/my 路由
-	registrations.GET("/my", h.GetMyRegistrations)
 }
 
 // CreateRegistration 创建报名

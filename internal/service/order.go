@@ -47,6 +47,11 @@ func NewOrderService(
 
 // CreateOrder 创建订单
 func (s *orderService) CreateOrder(userID uint, req *CreateOrderRequest) (*model.PickupOrder, error) {
+	// 验证价格不为负
+	if req.PriceTotal < 0 {
+		return nil, fmt.Errorf("订单金额不能为负数")
+	}
+
 	// 检查报名是否存在且属于当前用户
 	registration, err := s.registrationRepo.GetByID(req.RegistrationID)
 	if err != nil {
@@ -134,8 +139,43 @@ func (s *orderService) GetUserOrders(userID uint) ([]*model.PickupOrder, error) 
 	return orders, nil
 }
 
+// validTransitions defines allowed order status transitions
+var validTransitions = map[model.OrderStatus][]model.OrderStatus{
+	model.OrderStatusCreated:   {model.OrderStatusPaid, model.OrderStatusCanceled},
+	model.OrderStatusPaid:      {model.OrderStatusAssigned, model.OrderStatusCanceled, model.OrderStatusNotified},
+	model.OrderStatusAssigned:  {model.OrderStatusNotified, model.OrderStatusCanceled},
+	model.OrderStatusNotified:  {model.OrderStatusCompleted, model.OrderStatusCanceled},
+	model.OrderStatusCompleted: {},
+	model.OrderStatusCanceled:  {},
+}
+
+// isValidTransition checks if a status transition is allowed
+func isValidTransition(from, to model.OrderStatus) bool {
+	allowed, ok := validTransitions[from]
+	if !ok {
+		return false
+	}
+	for _, s := range allowed {
+		if s == to {
+			return true
+		}
+	}
+	return false
+}
+
 // UpdateOrderStatus 更新订单状态
 func (s *orderService) UpdateOrderStatus(orderID uint, status model.OrderStatus) error {
+	// 获取当前订单状态
+	order, err := s.orderRepo.GetByID(orderID)
+	if err != nil {
+		return fmt.Errorf("获取订单失败: %w", err)
+	}
+
+	// 验证状态转换是否合法
+	if !isValidTransition(order.Status, status) {
+		return fmt.Errorf("不允许从 %s 转换到 %s 状态", order.Status, status)
+	}
+
 	if err := s.orderRepo.UpdateStatus(orderID, status); err != nil {
 		s.logger.Error("failed to update order status", zap.Error(err))
 		return fmt.Errorf("更新订单状态失败: %w", err)
