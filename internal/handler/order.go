@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"pickup/internal/middleware"
 	"pickup/internal/model"
@@ -94,12 +95,33 @@ func (h *OrderHandler) GetMyOrders(c *gin.Context) {
 		return
 	}
 
+	page, pageSize, offset := parsePagination(c)
+
 	orders, err := h.orderService.GetUserOrders(userID)
 	if err != nil {
 		h.logger.Error("get user orders failed", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(model.CodeInternalError, "获取订单列表失败"))
 		return
 	}
+
+	total := len(orders)
+	if offset >= total {
+		c.Header("X-Page", strconv.Itoa(page))
+		c.Header("X-Page-Size", strconv.Itoa(pageSize))
+		c.Header("X-Total-Count", strconv.Itoa(total))
+		c.JSON(http.StatusOK, model.NewSuccessResponse([]*model.PickupOrder{}))
+		return
+	}
+
+	end := offset + pageSize
+	if end > total {
+		end = total
+	}
+
+	c.Header("X-Page", strconv.Itoa(page))
+	c.Header("X-Page-Size", strconv.Itoa(pageSize))
+	c.Header("X-Total-Count", strconv.Itoa(total))
+	orders = orders[offset:end]
 
 	c.JSON(http.StatusOK, model.NewSuccessResponse(orders))
 }

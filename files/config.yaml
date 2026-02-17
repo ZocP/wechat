@@ -1,4 +1,34 @@
+crypto:
+    key: pickup-crypto-key-32-characters-long
+database:
+    host: localhost
+    maxidleconns: 10
+    maxlifetime: 3600
+    maxopenconns: 100
+    name: pickup_scheduler
+    password: pickup
+    port: 3306
+    user: root
+jwt:
+    expirehours: 24
+    issuer: pickup
+    secret: pickup-secret-key
+logger:
+    compress: true
+    developing: false
+    logpath: ./files/logs/
+    logtofile: true
+    maxsize: 2
 server:
-  port: 9090
-  allowCORS: true
-  releaseMode: false
+    addr: ""
+    allowcors: true
+    port: 9090
+    releasemode: false
+wechat:
+    appid: "wxe94aa26b91975f48"
+    appsecret: a8eb1a2f428d3eec95f045714a9c3a97
+    mchid: ""
+    mchkey: ""
+    notifyurl: ""
+    adminphone: "13928998540"
+    adminopenid: "oIatg3SgY-u_CBqwbtiMimofSqAE"

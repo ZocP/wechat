@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strconv"
 
 	"pickup/internal/middleware"
 	"pickup/internal/model"
@@ -100,12 +101,33 @@ func (h *RegistrationHandler) GetMyRegistrations(c *gin.Context) {
 		return
 	}
 
+	page, pageSize, offset := parsePagination(c)
+
 	registrations, err := h.registrationService.GetUserRegistrations(userID)
 	if err != nil {
 		h.logger.Error("get user registrations failed", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(model.CodeInternalError, "获取报名列表失败"))
 		return
 	}
+
+	total := len(registrations)
+	if offset >= total {
+		c.Header("X-Page", strconv.Itoa(page))
+		c.Header("X-Page-Size", strconv.Itoa(pageSize))
+		c.Header("X-Total-Count", strconv.Itoa(total))
+		c.JSON(http.StatusOK, model.NewSuccessResponse([]*model.Registration{}))
+		return
+	}
+
+	end := offset + pageSize
+	if end > total {
+		end = total
+	}
+
+	c.Header("X-Page", strconv.Itoa(page))
+	c.Header("X-Page-Size", strconv.Itoa(pageSize))
+	c.Header("X-Total-Count", strconv.Itoa(total))
+	registrations = registrations[offset:end]
 
 	c.JSON(http.StatusOK, model.NewSuccessResponse(registrations))
 }

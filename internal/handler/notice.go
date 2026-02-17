@@ -26,18 +26,25 @@ func NewNoticeHandler(noticeService service.NoticeService, logger *zap.Logger) *
 	}
 }
 
-// RegisterRoutes 注册路由
+// RegisterRoutes 注册路由 (保留兼容)
 func (h *NoticeHandler) RegisterRoutes(r *gin.RouterGroup) {
+	h.RegisterPublicRoutes(r)
+	h.RegisterAdminRoutes(r)
+}
+
+// RegisterPublicRoutes 注册公开路由 (无需认证)
+func (h *NoticeHandler) RegisterPublicRoutes(r *gin.RouterGroup) {
 	notices := r.Group("/notices")
 	{
 		notices.GET("", h.GetVisibleNotices)
 		notices.GET("/flight/:flight_no", h.GetNoticesByFlightNo)
 		notices.GET("/:id", h.GetNotice)
 	}
+}
 
-	// 管理端路由
+// RegisterAdminRoutes 注册管理端路由 (需要认证)
+func (h *NoticeHandler) RegisterAdminRoutes(r *gin.RouterGroup) {
 	admin := r.Group("/admin")
-	// admin.Use(middleware.AuthMiddleware(nil), middleware.RequireRole("admin", "dispatcher")) // 暂时移除认证中间件
 	{
 		admin.POST("/notices", h.CreateNotice)
 		admin.PUT("/notices/:id", h.UpdateNotice)
@@ -91,12 +98,33 @@ func (h *NoticeHandler) GetNotice(c *gin.Context) {
 
 // GetVisibleNotices 获取当前可见的消息
 func (h *NoticeHandler) GetVisibleNotices(c *gin.Context) {
+	page, pageSize, offset := parsePagination(c)
+
 	notices, err := h.noticeService.GetVisibleNotices()
 	if err != nil {
 		h.logger.Error("get visible notices failed", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(model.CodeInternalError, "获取消息列表失败"))
 		return
 	}
+
+	total := len(notices)
+	if offset >= total {
+		c.Header("X-Page", strconv.Itoa(page))
+		c.Header("X-Page-Size", strconv.Itoa(pageSize))
+		c.Header("X-Total-Count", strconv.Itoa(total))
+		c.JSON(http.StatusOK, model.NewSuccessResponse([]*model.Notice{}))
+		return
+	}
+
+	end := offset + pageSize
+	if end > total {
+		end = total
+	}
+
+	c.Header("X-Page", strconv.Itoa(page))
+	c.Header("X-Page-Size", strconv.Itoa(pageSize))
+	c.Header("X-Total-Count", strconv.Itoa(total))
+	notices = notices[offset:end]
 
 	c.JSON(http.StatusOK, model.NewSuccessResponse(notices))
 }
@@ -109,12 +137,33 @@ func (h *NoticeHandler) GetNoticesByFlightNo(c *gin.Context) {
 		return
 	}
 
+	page, pageSize, offset := parsePagination(c)
+
 	notices, err := h.noticeService.GetNoticesByFlightNo(flightNo)
 	if err != nil {
 		h.logger.Error("get notices by flight failed", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, model.NewErrorResponse(model.CodeInternalError, "获取航班消息失败"))
 		return
 	}
+
+	total := len(notices)
+	if offset >= total {
+		c.Header("X-Page", strconv.Itoa(page))
+		c.Header("X-Page-Size", strconv.Itoa(pageSize))
+		c.Header("X-Total-Count", strconv.Itoa(total))
+		c.JSON(http.StatusOK, model.NewSuccessResponse([]*model.Notice{}))
+		return
+	}
+
+	end := offset + pageSize
+	if end > total {
+		end = total
+	}
+
+	c.Header("X-Page", strconv.Itoa(page))
+	c.Header("X-Page-Size", strconv.Itoa(pageSize))
+	c.Header("X-Total-Count", strconv.Itoa(total))
+	notices = notices[offset:end]
 
 	c.JSON(http.StatusOK, model.NewSuccessResponse(notices))
 }

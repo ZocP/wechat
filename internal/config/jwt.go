@@ -14,8 +14,8 @@ type JWTConfig struct {
 // NewJWTConfig 创建JWT配置
 func NewJWTConfig() *JWTConfig {
 	return &JWTConfig{
-		Secret:     getEnv("JWT_SECRET", "pickup-secret-key"),
-		ExpireTime: time.Duration(getEnvInt("JWT_EXPIRE_HOURS", 24)) * time.Hour,
-		Issuer:     getEnv("JWT_ISSUER", "pickup"),
+		Secret:     getEnvOrConfig("JWT_SECRET", "jwt.secret", "pickup-secret-key"),
+		ExpireTime: time.Duration(getEnvOrConfigInt("JWT_EXPIRE_HOURS", "jwt.expireHours", 24)) * time.Hour,
+		Issuer:     getEnvOrConfig("JWT_ISSUER", "jwt.issuer", "pickup"),
 	}
 }

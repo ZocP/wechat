@@ -1,1 +1,17 @@
 /.idea/
+
+# Coverage artifacts
+/coverage_all
+/coverage_all_func*.txt
+/coverage_packages.txt
+/coverage_service
+/coverage/
+
+# Runtime logs
+/files/logs/*.log
+/files/logs/*.log.gz
+
+# Local benchmark artifacts
+/benchmark/results*.json
+/benchmark/summary*.json
+/benchmark/tokens.json

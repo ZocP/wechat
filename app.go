@@ -4,6 +4,7 @@ import (
 	internalcfg "pickup/internal/config"
 	"pickup/internal/handler"
 	"pickup/internal/repository"
+	"pickup/internal/scheduler"
 	"pickup/internal/service"
 	pkgcfg "pickup/pkg/config"
 	"pickup/pkg/server"
@@ -30,5 +31,8 @@ func main() {
 
 		// 处理器层
 		handler.Provide(),
+
+		// 新调度域
+		scheduler.Provide(),
 	)).Run()
 }

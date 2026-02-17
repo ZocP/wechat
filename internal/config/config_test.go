@@ -132,6 +132,8 @@ func TestNewWechatConfig_Defaults(t *testing.T) {
 	assert.Empty(t, cfg.MchID)
 	assert.Empty(t, cfg.MchKey)
 	assert.Empty(t, cfg.NotifyURL)
+	assert.Empty(t, cfg.AdminPhone)
+	assert.Empty(t, cfg.AdminOpenID)
 }
 
 func TestNewWechatConfig_CustomEnv(t *testing.T) {
@@ -140,12 +142,16 @@ func TestNewWechatConfig_CustomEnv(t *testing.T) {
 	os.Setenv("WECHAT_MCH_ID", "wx_test_mch")
 	os.Setenv("WECHAT_MCH_KEY", "wx_test_key")
 	os.Setenv("WECHAT_NOTIFY_URL", "https://example.com/notify")
+	os.Setenv("WECHAT_ADMIN_PHONE", "13928998540")
+	os.Setenv("WECHAT_ADMIN_OPEN_ID", "openid_admin")
 	defer func() {
 		os.Unsetenv("WECHAT_APPID")
 		os.Unsetenv("WECHAT_SECRET")
 		os.Unsetenv("WECHAT_MCH_ID")
 		os.Unsetenv("WECHAT_MCH_KEY")
 		os.Unsetenv("WECHAT_NOTIFY_URL")
+		os.Unsetenv("WECHAT_ADMIN_PHONE")
+		os.Unsetenv("WECHAT_ADMIN_OPEN_ID")
 	}()
 
 	cfg := NewWechatConfig()
@@ -154,6 +160,8 @@ func TestNewWechatConfig_CustomEnv(t *testing.T) {
 	assert.Equal(t, "wx_test_mch", cfg.MchID)
 	assert.Equal(t, "wx_test_key", cfg.MchKey)
 	assert.Equal(t, "https://example.com/notify", cfg.NotifyURL)
+	assert.Equal(t, "13928998540", cfg.AdminPhone)
+	assert.Equal(t, "openid_admin", cfg.AdminOpenID)
 }
 
 // ===== Crypto Config Tests =====

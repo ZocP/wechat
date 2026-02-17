@@ -11,6 +11,7 @@ import (
 
 	"pickup/internal/config"
 	"pickup/internal/model"
+	schedulercontrollers "pickup/internal/scheduler/controllers"
 	"pickup/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -1569,13 +1570,9 @@ func TestAdminHandler_ExportDatabaseFields_Error(t *testing.T) {
 // ===== Router Config Tests =====
 
 func TestNewRouterConfig(t *testing.T) {
-	authSvc := new(mockAuthService)
-	regSvc := new(mockRegistrationService)
-	orderSvc := new(mockOrderService)
-	paySvc := new(mockPaymentService)
-	noticeSvc := new(mockNoticeService)
-	schemaSvc := new(mockSchemaService)
-	logger := newTestLogger()
+	authCtl := schedulercontrollers.NewAuthController(nil)
+	studentCtl := schedulercontrollers.NewStudentController(nil)
+	adminCtl := schedulercontrollers.NewAdminController(nil)
 
 	jwtCfg := &config.JWTConfig{
 		Secret:     "test-secret",
@@ -1583,25 +1580,18 @@ func TestNewRouterConfig(t *testing.T) {
 		Issuer:     "test",
 	}
 
-	rc := NewRouterConfig(authSvc, regSvc, orderSvc, paySvc, noticeSvc, schemaSvc, jwtCfg, logger)
+	rc := NewRouterConfig(authCtl, studentCtl, adminCtl, jwtCfg)
 	require.NotNil(t, rc)
-	assert.Equal(t, authSvc, rc.AuthService)
-	assert.Equal(t, regSvc, rc.RegistrationService)
-	assert.Equal(t, orderSvc, rc.OrderService)
-	assert.Equal(t, paySvc, rc.PaymentService)
-	assert.Equal(t, noticeSvc, rc.NoticeService)
-	assert.Equal(t, schemaSvc, rc.SchemaService)
+	assert.Equal(t, authCtl, rc.AuthController)
+	assert.Equal(t, studentCtl, rc.StudentController)
+	assert.Equal(t, adminCtl, rc.AdminController)
 	assert.Equal(t, jwtCfg, rc.JWTConfig)
 }
 
 func TestSetupRoutes_HealthCheck(t *testing.T) {
-	authSvc := new(mockAuthService)
-	regSvc := new(mockRegistrationService)
-	orderSvc := new(mockOrderService)
-	paySvc := new(mockPaymentService)
-	noticeSvc := new(mockNoticeService)
-	schemaSvc := new(mockSchemaService)
-	logger := newTestLogger()
+	authCtl := schedulercontrollers.NewAuthController(nil)
+	studentCtl := schedulercontrollers.NewStudentController(nil)
+	adminCtl := schedulercontrollers.NewAdminController(nil)
 
 	jwtCfg := &config.JWTConfig{
 		Secret:     "test-secret",
@@ -1609,7 +1599,7 @@ func TestSetupRoutes_HealthCheck(t *testing.T) {
 		Issuer:     "test",
 	}
 
-	rc := NewRouterConfig(authSvc, regSvc, orderSvc, paySvc, noticeSvc, schemaSvc, jwtCfg, logger)
+	rc := NewRouterConfig(authCtl, studentCtl, adminCtl, jwtCfg)
 
 	router := gin.New()
 	rc.SetupRoutes(router)

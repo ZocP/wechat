@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"pickup/internal/model"
+	schedulermodels "pickup/internal/scheduler/models"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -32,17 +32,17 @@ type DatabaseConfig struct {
 // NewDatabaseConfig 创建数据库配置
 func NewDatabaseConfig() *DatabaseConfig {
 	return &DatabaseConfig{
-		Host:         getEnv("DB_HOST", "localhost"),
-		Port:         getEnvInt("DB_PORT", 3306),
-		User:         getEnv("DB_USER", "root"),
-		Password:     getEnv("DB_PASSWORD", ""),
-		Database:     getEnv("DB_NAME", "pickup"),
+		Host:         getEnvOrConfig("DB_HOST", "database.host", "localhost"),
+		Port:         getEnvOrConfigInt("DB_PORT", "database.port", 3306),
+		User:         getEnvOrConfig("DB_USER", "database.user", "root"),
+		Password:     getEnvOrConfig("DB_PASSWORD", "database.password", ""),
+		Database:     getEnvOrConfig("DB_NAME", "database.name", "pickup"),
 		Charset:      "utf8mb4",
 		ParseTime:    true,
 		Loc:          "Local",
-		MaxOpenConns: 100,
-		MaxIdleConns: 10,
-		MaxLifetime:  3600,
+		MaxOpenConns: getEnvOrConfigInt("DB_MAX_OPEN_CONNS", "database.maxOpenConns", 100),
+		MaxIdleConns: getEnvOrConfigInt("DB_MAX_IDLE_CONNS", "database.maxIdleConns", 10),
+		MaxLifetime:  getEnvOrConfigInt("DB_MAX_LIFETIME", "database.maxLifetime", 3600),
 	}
 }
 
@@ -80,17 +80,7 @@ func NewDatabase(cfg *DatabaseConfig, logger *zap.Logger) (*gorm.DB, error) {
 
 // autoMigrate 自动迁移数据库表
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
-		&model.User{},
-		&model.Registration{},
-		&model.PickupOrder{},
-		&model.Assignment{},
-		&model.Driver{},
-		&model.Vehicle{},
-		&model.Notice{},
-		&model.PaymentOrder{},
-		&model.ConsentLog{},
-	)
+	return schedulermodels.AutoMigrate(db)
 }
 
 // Provide 提供依赖注入

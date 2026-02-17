@@ -1,0 +1,39 @@
+# Full runtime config template
+# Copy to files/config.yaml and update all values for your environment.
+
+server:
+  # Bind address. Empty means all interfaces.
+  addr: ""
+  # HTTP listen port
+  port: 9090
+  # Enable CORS headers
+  allowCORS: true
+  # Gin release mode in production
+  releaseMode: false
+
+database:
+  host: localhost
+  port: 3306
+  user: root
+  password: pickup
+  name: pickup_scheduler
+  maxOpenConns: 100
+  maxIdleConns: 10
+  maxLifetime: 3600
+
+jwt:
+  secret: "pickup-secret-key"
+  expireHours: 24
+  issuer: "pickup"
+
+wechat:
+  appId: ""
+  appSecret: ""
+  mchId: ""
+  mchKey: ""
+  notifyUrl: ""
+  adminPhone: ""
+  adminOpenId: ""
+
+crypto:
+  key: "pickup-crypto-key-32-characters-long"
